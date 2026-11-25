@@ -1,0 +1,157 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { listOrders, setStatus, storageReady, type Status } from '../lib/store';
+import { nowInDakar } from '../lib/slots';
+import { fcfa } from '../lib/royaltine';
+import crypto from 'node:crypto';
+
+export const prerender = false;
+
+// Set ADMIN_PASSWORD on Vercel (default "demo" for the pitch).
+const PASSWORD = process.env.ADMIN_PASSWORD || 'demo';
+const token = crypto.createHash('sha256').update('ry-admin:' + PASSWORD).digest('hex');
+let authed = Astro.cookies.get('ry_admin')?.value === token;
+let loginError = '';
+let actionError = '';
+const STATUSES: Status[] = ['nouvelle', 'prête', 'retirée', 'annulée'];
+
+if (Astro.request.method === 'POST') {
+  const fd = await Astro.request.formData();
+  const action = String(fd.get('action'));
+  if (action === 'login') {
+    if (fd.get('password') === PASSWORD) {
+      Astro.cookies.set('ry_admin', token, { httpOnly: true, sameSite: 'strict', secure: import.meta.env.PROD, path: '/admin', maxAge: 60 * 60 * 12 });
+      authed = true;
+    } else loginError = 'Mot de passe incorrect.';
+  } else if (action === 'logout') {
+    Astro.cookies.delete('ry_admin', { path: '/admin' });
+    authed = false;
+  } else if (authed && storageReady() && STATUSES.includes(action as Status)) {
+    const o = await setStatus(String(fd.get('id')), action as Status);
+    if (!o) actionError = 'Impossible de rétablir : ce créneau est complet.';
+  }
+  if (authed && !actionError && action !== 'login') return Astro.redirect(Astro.url.pathname + Astro.url.search, 303);
+}
+
+const today = nowInDakar().date;
+const filter = Astro.url.searchParams.get('vue') ?? 'a-venir';
+const ready = storageReady();
+const all = authed && ready ? await listOrders() : [];
+const active = (o: { status: Status }) => o.status !== 'annulée';
+const list = all
+  .filter((o) => (filter === 'a-preparer' ? o.date >= today && o.status === 'nouvelle' : o.date >= today))
+  .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+const byDay = new Map<string, typeof list>();
+for (const o of list) byDay.set(o.date, [...(byDay.get(o.date) ?? []), o]);
+const fmt = (d: string) => new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(d + 'T00:00:00Z'));
+const todayList = all.filter((o) => o.date === today && active(o));
+const next = { nouvelle: 'prête', prête: 'retirée' } as Record<Status, Status | undefined>;
+const nextLabel = { prête: 'Marquer prête', retirée: 'Marquer retirée' } as Record<string, string>;
+---
+<Layout title="Espace boutique, La Royaltine" description="Commandes reçues en ligne." bare>
+  <section class="admin">
+    <div class="wrap">
+      {!authed ? (
+        <form method="post" class="login">
+          <h1>Espace boutique</h1>
+          <p>Les commandes passées en ligne, pour l’équipe La Royaltine.</p>
+          <input type="hidden" name="action" value="login" />
+          <label class="field"><span>Mot de passe</span><input type="password" name="password" autocomplete="current-password" required autofocus /></label>
+          {loginError && <p class="err" role="alert">{loginError}</p>}
+          <button class="btn" type="submit">Ouvrir les commandes</button>
+        </form>
+      ) : (
+        <>
+          <div class="top">
+            <h1>Commandes</h1>
+            <form method="post"><input type="hidden" name="action" value="logout" /><button class="mini" type="submit">Se déconnecter</button></form>
+          </div>
+          {!ready && <p class="notice" role="alert">Le stockage n’est pas configuré sur ce serveur. Ajoutez Upstash Redis au projet Vercel (KV_REST_API_URL et KV_REST_API_TOKEN), puis redéployez.</p>}
+          {actionError && <p class="notice" role="alert">{actionError}</p>}
+          <div class="stats">
+            <div><span>Retraits aujourd’hui</span><strong class="num">{todayList.length}</strong></div>
+            <div><span>À préparer</span><strong class="num">{all.filter((o) => o.date >= today && o.status === 'nouvelle').length}</strong></div>
+            <div><span>Montant du jour</span><strong class="num">{fcfa(todayList.reduce((n, o) => n + o.total, 0))}</strong></div>
+          </div>
+          <nav class="tabs" aria-label="Filtre">
+            <a href="/admin" aria-current={filter === 'a-venir' ? 'page' : undefined}>Toutes à venir</a>
+            <a href="/admin?vue=a-preparer" aria-current={filter === 'a-preparer' ? 'page' : undefined}>À préparer</a>
+          </nav>
+          {list.length === 0 && <p class="empty">Aucune commande à venir pour le moment.</p>}
+          {[...byDay].map(([day, items]) => (
+            <div class="day">
+              <h2>{fmt(day)}{day === today && <span class="pill">Aujourd’hui</span>}<span class="sum num">{items.filter(active).length} commandes · {fcfa(items.filter(active).reduce((n, o) => n + o.total, 0))}</span></h2>
+              <div class="cards">
+                {items.map((o) => (
+                  <article class={`card is-${o.status === 'prête' ? 'ready' : o.status === 'retirée' ? 'done' : o.status === 'annulée' ? 'off' : 'new'}`}>
+                    <header>
+                      <strong class="num">{o.time.replace(':', ' h ')}</strong>
+                      <span class="status">{o.status}</span>
+                      <span class="num ref">{o.ref}</span>
+                    </header>
+                    <p class="who">{o.name} · <a class="link num" href={`tel:${o.phone.replace(/\s/g, '')}`}>{o.phone}</a></p>
+                    <ul>
+                      {o.lines.map((l) => <li><span>{l.qty} × {l.name}{l.unit && `, ${l.unit}`}</span><span class="num">{fcfa(l.qty * l.price)}</span></li>)}
+                    </ul>
+                    {o.note && <p class="note">« {o.note} »</p>}
+                    <footer>
+                      <strong class="num">{fcfa(o.total)}</strong>
+                      <form method="post">
+                        <input type="hidden" name="id" value={o.id} />
+                        {next[o.status] && <button class="mini mini--main" name="action" value={next[o.status]}>{nextLabel[next[o.status]!]}</button>}
+                        {o.status !== 'annulée' && o.status !== 'retirée' && <button class="mini" name="action" value="annulée">Annuler</button>}
+                        {o.status === 'annulée' && <button class="mini" name="action" value="nouvelle">Rétablir</button>}
+                      </form>
+                    </footer>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .admin { padding: calc(var(--nav) + 56px) 0 96px; min-height: 100svh; }
+  h1 { font-size: 56px; }
+  .login { max-width: 420px; display: grid; gap: 18px; }
+  .field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 500; }
+  .field input { height: 50px; padding: 0 14px; border: 1px solid #d9c3b4; background: #fff; font-size: 16px; }
+  .err { color: #a3271f; }
+  .notice { margin-top: 24px; padding: 16px 20px; background: #f6d8d2; color: #7d2219; }
+  .top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
+  .stats div { display: grid; gap: 6px; padding: 24px; background: var(--surface); }
+  .stats span { font-size: 14px; color: var(--muted); }
+  .stats strong { font: 600 40px/1 var(--f-display); }
+  .tabs { display: flex; gap: 8px; margin-bottom: 32px; }
+  .tabs a { padding: 9px 16px; border: 1px solid var(--line); text-decoration: none; }
+  .tabs a[aria-current='page'] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .empty { color: var(--muted); }
+  .day { margin-bottom: 48px; }
+  .day h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 30px; text-transform: capitalize; margin-bottom: 16px; }
+  .pill { padding: 4px 10px; background: var(--accent); color: #fff; font: 500 13px/1.2 var(--f-text); text-transform: none; }
+  .sum { margin-left: auto; font: 400 15px/1 var(--f-text); color: var(--muted); text-transform: none; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .card { background: #fff; border: 1px solid var(--line); border-top: 3px solid var(--gold); padding: 18px; display: grid; gap: 10px; font-size: 15px; }
+  .card.is-ready { border-top-color: #3c7a4e; }
+  .card.is-done, .card.is-off { opacity: 0.6; border-top-color: var(--line); }
+  .card.is-off ul { text-decoration: line-through; }
+  .card header { display: flex; align-items: baseline; gap: 10px; }
+  .card header strong { font: 600 24px/1 var(--f-display); }
+  .status { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+  .ref { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .card ul { list-style: none; margin: 0; padding: 0; }
+  .card li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .note { color: var(--ink-2); font-style: italic; }
+  .card footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .card footer form { display: flex; gap: 6px; }
+  .mini { height: 36px; padding: 0 14px; border: 1px solid var(--line); background: transparent; cursor: pointer; }
+  .mini:hover { border-color: var(--ink); }
+  .mini--main { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .mini--main:hover { background: var(--accent-deep); }
+  @media (max-width: 767px) { .stats { grid-template-columns: 1fr; } h1 { font-size: 44px; } }
+</style>

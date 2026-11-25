@@ -1,0 +1,25 @@
+{
+ "photos": [
+  {
+   "trade": "bakery",
+   "lead": null,
+   "ids": [
+    "m11317510",
+    "m37164269",
+    "m33603672",
+    "m33603558"
+   ],
+   "sections": [
+    "oven",
+    "dough",
+    "bread",
+    "bread",
+    "hands"
+   ],
+   "seed": "dbkv6y",
+   "at": "2026-11-25T11:47:24.943Z"
+  }
+ ],
+ "palettes": [],
+ "types": []
+}

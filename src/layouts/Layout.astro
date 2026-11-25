@@ -1,0 +1,147 @@
+---
+import '../styles/global.css';
+import { info, hoursRows } from '../lib/royaltine';
+
+interface Props { title: string; description: string; bare?: boolean; page?: 'home' | 'shop' }
+const { title, description, bare = false, page = 'home' } = Astro.props;
+const nav = [
+  { href: '/#vitrine', label: 'La vitrine' },
+  { href: '/#commandes', label: 'Sur commande' },
+  { href: '/#visite', label: 'Nous trouver' },
+];
+const year = new Date().getFullYear();
+---
+<!doctype html>
+<html lang="fr" data-type="place">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="page-type" content="place" />
+    <meta name="site-kind" content="other" />
+    <meta name="page-kind" content="place" />
+    <meta name="theme-color" content="#fbf4ee" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="/img/croissants.webp" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Jost:wght@400;500&family=Pinyon+Script&display=swap" rel="stylesheet" />
+    <script type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Bakery',
+      name: info.fullName,
+      telephone: info.phones.map((p) => p.tel),
+      address: { '@type': 'PostalAddress', addressLocality: 'Dakar', addressCountry: 'SN' },
+      openingHours: ['Mo-Sa 06:30-20:30', 'Su 07:00-20:00'],
+      sameAs: [info.instagram],
+    })} />
+  </head>
+  <body id="top">
+    <header class="nav">
+      <div class="wrap">
+        <a class="logo" href="/" aria-label="La Royaltine, accueil">La Royaltine</a>
+        {!bare && <ul class="nav__links">{nav.map((n) => <li><a href={n.href}>{n.label}</a></li>)}</ul>}
+        {!bare && (
+          <button class="nav__menu" type="button" aria-expanded="false" aria-controls="sheet" aria-label="Ouvrir le menu">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 7h14M3 13h14" /></svg>
+          </button>
+        )}
+        {page !== 'shop' && <a class="btn" href="/commander" style={bare ? 'margin-left:auto' : ''}>Commander en ligne</a>}
+        {page === 'shop' && <a class="btn" href="#panier" data-cart-link>Panier <span class="num" data-cart-count>0</span></a>}
+      </div>
+    </header>
+
+    {!bare && (
+      <nav class="sheet" id="sheet" hidden aria-label="Menu">
+        {nav.map((n) => <a class="sheet__row" href={n.href}>{n.label}</a>)}
+        <a class="sheet__row" href="/commander">Commander en ligne</a>
+        <div class="sheet__foot">
+          <p>{hoursRows[0].days} {hoursRows[0].time}<br />{hoursRows[1].days} {hoursRows[1].time}</p>
+          <a class="btn" href="/commander">Commander en ligne</a>
+        </div>
+      </nav>
+    )}
+
+    <main id="contenu"><slot /></main>
+
+    <footer class="foot">
+      <div class="wrap">
+        <div class="foot__grid">
+          <div>
+            <p class="foot__label">Boutique</p>
+            <a class="link link--light" href={info.map} target="_blank" rel="noopener">Pâtisserie La Royaltine, Dakar</a>
+            <p>{info.trades.join(' · ')}</p>
+          </div>
+          <div>
+            <p class="foot__label">Horaires</p>
+            {hoursRows.map((h) => <p>{h.days}<br /><span class="num">{h.time}</span></p>)}
+          </div>
+          <div>
+            <p class="foot__label">Contact</p>
+            {info.phones.map((p) => <a class="link link--light num" href={`tel:${p.tel}`}>{p.label}</a>)}
+            <a class="link link--light" href={info.instagram} target="_blank" rel="noopener">Instagram {info.instagramHandle}</a>
+          </div>
+          <div>
+            <p class="foot__label">Commander</p>
+            <a class="link link--light" href="/commander">Retrait en boutique</a>
+            <a class="link link--light" href="/commander#noel">Bûches de Noël 2026</a>
+            <a class="link link--light" href="/commander#gateaux">Gâteaux sur commande</a>
+          </div>
+        </div>
+        <div class="foot__legal">
+          <span>© {year} Pâtisserie La Royaltine</span>
+          <a class="link link--light" href="/admin">Espace boutique</a>
+        </div>
+      </div>
+    </footer>
+
+    {!bare && page === 'home' && (
+      <nav class="actionbar" aria-label="Action rapide">
+        <a class="btn" href="/commander">Commander en ligne</a>
+      </nav>
+    )}
+
+    <style>
+      .foot { background: var(--band); color: var(--on-band-2); padding: 80px 0 calc(32px + env(safe-area-inset-bottom)); }
+      .foot__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); padding-bottom: 56px; border-bottom: 1px solid rgb(251 241 232 / 0.16); }
+      .foot__grid > div { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; font-size: 16px; }
+      .foot__label { font: 500 13px/1.2 var(--f-text); letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 4px; }
+      .foot :global(.link--light) { color: var(--on-band); }
+      .foot__legal { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 28px; padding-top: 28px; font-size: 14px; }
+      @media (max-width: 1023px) { .foot__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 40px; } }
+      @media (max-width: 639px) { .foot { padding-bottom: calc(100px + env(safe-area-inset-bottom)); } .foot__grid { grid-template-columns: 1fr; } }
+    </style>
+
+    <script>
+      const nav = document.querySelector('.nav')!;
+      const onScroll = () => nav.classList.toggle('is-scrolled', scrollY > 8);
+      addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      const btn = document.querySelector<HTMLButtonElement>('.nav__menu');
+      const sheet = document.getElementById('sheet');
+      if (btn && sheet) {
+        const set = (open: boolean) => {
+          sheet.hidden = !open;
+          btn.setAttribute('aria-expanded', String(open));
+          btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+          document.body.style.overflow = open ? 'hidden' : '';
+        };
+        btn.addEventListener('click', () => set(sheet.hidden));
+        sheet.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('a')) set(false); });
+        addEventListener('keydown', (e) => { if (e.key === 'Escape') set(false); });
+        matchMedia('(min-width: 1024px)').addEventListener('change', (m) => m.matches && set(false));
+      }
+
+      // Phone action bar: away while the hero is on screen.
+      const bar = document.querySelector<HTMLElement>('.actionbar');
+      const hero = document.querySelector('.hero');
+      if (bar && hero && 'IntersectionObserver' in window) {
+        new IntersectionObserver(([e]) => bar.classList.toggle('is-away', e.isIntersecting)).observe(hero);
+      }
+    </script>
+  </body>
+</html>

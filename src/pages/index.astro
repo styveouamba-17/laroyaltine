@@ -1,0 +1,218 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { info, hoursRows, catalog, fcfa } from '../lib/royaltine';
+
+// Page plan (place, compact): hero · visit · the counter (groups + tall photograph) ·
+// made to order (three kinds) · close on the chocolate band · footer.
+const cat = (id: string) => catalog.find((c) => c.id === id)!;
+const groups = [cat('viennoiseries'), cat('patisseries'), cat('pains')].map((c) => ({ ...c, items: c.items.slice(0, 5) }));
+const from = (id: string) => Math.min(...cat(id).items.map((p) => p.price));
+const arrow = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg>';
+const orders = [
+  { href: '/commander#gateaux', img: 'gateau', alt: 'Gâteau chocolat caramel cerclé d’un ruban doré', label: 'Anniversaires', title: 'Gâteaux entiers', text: `De 6 à 10 parts, prêts en 48 h. À partir de ${fcfa(from('gateaux'))}.` },
+  { href: '/commander#noel', img: 'poche', alt: 'Chantilly pochée sur un entremets au chocolat', label: 'Noël 2026', title: 'Bûches de Noël', text: `Trois recettes, 6 ou 8 parts, jusqu’au 31 décembre. À partir de ${fcfa(from('noel'))}.` },
+  { href: '/commander#patisseries', img: 'mangue', alt: 'Carré mangue tenu dans la main', label: 'Réceptions', title: 'Pièces individuelles', text: 'Tartelettes, carrés et éclairs pour vos tables, à commander la veille.' },
+];
+---
+<Layout title="La Royaltine, pâtisserie et boulangerie à Dakar" description="Pains, viennoiseries, entremets, glaces et chocolats. Ouvert 7 jours sur 7 dès 6 h 30. Commandez en ligne et retirez en boutique.">
+  <!-- Deal: place · own colours (peach, burgundy, chocolate) · Cormorant Garamond + Jost · square · offer tall-small · orders row · close on brand band -->
+
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap grid hero__grid">
+      <div class="hero__text">
+        <a class="notice" href="/commander#noel">Bûches de Noël 2026 : commandes ouvertes jusqu’au 31 décembre</a>
+        <h1 id="hero-title">Pâtisserie et boulangerie à Dakar</h1>
+        <p class="lead">Pains, viennoiseries pur beurre, entremets, glaces et chocolats. Ouvert 7 jours sur 7, dès 6&nbsp;h&nbsp;30.</p>
+        <div class="hero__cta">
+          <a class="btn" href="/commander">Commander en ligne <Fragment set:html={arrow} /></a>
+          <a class="link" href="#vitrine">Voir la vitrine</a>
+        </div>
+      </div>
+      <figure class="ph hero__ph">
+        <img src="/img/croissants.webp" width="784" height="940" alt="Un croissant et un pain au chocolat sur le papier imprimé La Royaltine" fetchpriority="high" data-source="client" data-subject="viennoiseries" />
+      </figure>
+    </div>
+  </section>
+
+  <section class="sec" id="visite" data-place="visit" aria-labelledby="visit-title">
+    <div class="wrap grid visit__grid">
+      <div class="visit">
+        <div class="visit__top">
+          <h2 id="visit-title" class="h2">Nous trouver</h2>
+          <p class="open" data-open-now>Ouvert 7 jours sur 7</p>
+        </div>
+        <div class="visit__cols">
+          <div>
+            <a class="visit__addr" href={info.map} target="_blank" rel="noopener">La Royaltine<br />Dakar</a>
+            <p class="visit__tel">{info.phones.map((p, i) => <>{i > 0 && ' · '}<a class="link num" href={`tel:${p.tel}`}>{p.label}</a></>)}</p>
+            <a class="link" href={info.instagram} target="_blank" rel="noopener">Instagram {info.instagramHandle}</a>
+          </div>
+          <ul class="rows hours">
+            {hoursRows.map((h) => <li><span>{h.days}</span><span class="num">{h.time}</span></li>)}
+          </ul>
+        </div>
+        <ul class="rows visit__more">
+          <li><span>Sur place ou à emporter</span><span>Tous les jours</span></li>
+          <li><span>Commande en ligne</span><span>Prête à l’heure choisie</span></li>
+          <li><span>Paiement</span><span>Espèces, Wave, Orange Money</span></li>
+        </ul>
+      </div>
+      <a class="visit__ph" href={info.map} target="_blank" rel="noopener" aria-label="Itinéraire vers La Royaltine">
+        <figure class="ph"><img src="/img/glace.webp" width="784" height="871" loading="lazy" alt="Pot de glace La Royaltine sur une table de la terrasse" data-source="client" data-subject="terrasse" /></figure>
+      </a>
+    </div>
+  </section>
+
+  <section class="sec sec--alt" id="vitrine" aria-labelledby="vitrine-title">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="vitrine-title" class="h2">La vitrine et ses prix</h2>
+        <a class="link" href="/commander">Toute la carte <Fragment set:html={arrow} /></a>
+      </div>
+      <div class="grid vitrine__grid">
+        {groups.map((g) => (
+          <div class="group">
+            <p class="label">{g.name}</p>
+            <ul class="rows">
+              {g.items.map((p) => <li><span>{p.name}</span><span class="num">{fcfa(p.price)}</span></li>)}
+            </ul>
+          </div>
+        ))}
+        <a class="vitrine__ph" href="/commander#patisseries" aria-label="Commander une pâtisserie">
+          <figure class="ph"><img src="/img/tartelette.webp" width="828" height="947" loading="lazy" alt="Tartelette aux myrtilles et mûre, fleur en sucre" data-source="client" data-subject="pâtisserie" /></figure>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="commandes" aria-labelledby="commandes-title">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="commandes-title" class="h2">Gâteaux et bûches sur commande</h2>
+        <p>Choisissez en ligne, nous le préparons. Retrait en boutique, paiement sur place.</p>
+      </div>
+      <div class="grid orders">
+        {orders.map((o) => (
+          <a class="order" href={o.href}>
+            <figure class="ph"><img src={`/img/${o.img}.webp`} width="784" height="588" loading="lazy" alt={o.alt} data-source="client" data-subject={o.title} /></figure>
+            <div class="order__body">
+              <p class="label">{o.label}</p>
+              <h3>{o.title}</h3>
+              <p>{o.text}</p>
+              <span class="link">Commander <Fragment set:html={arrow} /></span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="close" aria-labelledby="close-title">
+    <div class="wrap">
+      <div class="close__row">
+        <h2 id="close-title" class="h2">Commandez, passez, c’est prêt.</h2>
+        <div>
+          <p>Retrait à l’heure choisie. {info.payment}.</p>
+          <a class="btn btn--light" href="/commander">Commander en ligne <Fragment set:html={arrow} /></a>
+        </div>
+      </div>
+      <p class="close__name" aria-hidden="true">La Royaltine</p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  /* Hero: text left, the croissants right, alone on the first screen. */
+  .hero { background: #fcd3ba; min-height: 100svh; padding: calc(var(--nav) + 40px) 0 56px; display: flex; align-items: center; }
+  .hero__grid { align-items: center; width: 100%; }
+  .hero__text { grid-column: span 6; display: flex; flex-direction: column; align-items: flex-start; gap: 28px; }
+  .hero h1 { font-size: clamp(48px, 6.4vw, 88px); line-height: 0.98; }
+  .hero .lead { max-width: 34ch; }
+  .hero__cta { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+  .hero__ph { grid-column: 8 / span 5; aspect-ratio: 784 / 940; max-height: calc(100svh - var(--nav) - 96px); justify-self: end; width: 100%; }
+  .notice { font-size: 14px; color: var(--accent); text-decoration: none; border-bottom: 1px solid currentColor; padding-bottom: 2px; }
+  .notice:hover { color: var(--accent-deep); }
+
+  /* Visit: panel on the peach surface, photograph right. */
+  .visit__grid { align-items: stretch; }
+  .visit { grid-column: span 6; background: var(--surface); padding: 48px; display: flex; flex-direction: column; gap: 32px; }
+  .visit__top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .open { font-size: 16px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 8px; }
+  .open::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+  .open.is-open::before { background: #3c7a4e; }
+  .visit__cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+  .visit__cols > div { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+  .visit__addr { font: 500 26px/1.2 var(--f-display); text-decoration: none; background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size 0.3s var(--ease); }
+  .visit__addr:hover { background-size: 100% 1px; }
+  .visit__tel { font-size: 16px; }
+  .hours li { flex-direction: column; gap: 2px; align-items: flex-start; }
+  .visit__more { margin-top: auto; border-top: 1px solid var(--line); }
+  .visit__more li span:last-child { color: var(--muted); text-align: right; }
+  .visit__ph { grid-column: span 6; display: block; }
+  .visit__ph .ph { height: 100%; aspect-ratio: 1; }
+
+  /* The counter: three groups of rows and a tall photograph. */
+  .vitrine__grid { align-items: start; }
+  .group { grid-column: span 3; }
+  .group .label { margin-bottom: 12px; }
+  .vitrine__ph { grid-column: span 3; display: block; }
+  .vitrine__ph .ph { aspect-ratio: 4 / 5; }
+
+  /* Made to order: three linked cards. */
+  .order { grid-column: span 4; display: flex; flex-direction: column; text-decoration: none; transition: transform 0.3s var(--ease); }
+  .order:hover { transform: translateY(-2px); }
+  .order .ph { aspect-ratio: 4 / 3; }
+  .order__body { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 20px; border-top: 1px solid var(--line); margin-top: 0; }
+  .order h3 { font-size: 30px; }
+  .order__body > p:not(.label) { font-size: 16px; line-height: 26px; color: var(--muted); }
+  .order:hover .link { background-size: 100% 1px; }
+  .order:hover .link :global(svg) { transform: translateX(3px); }
+
+  /* Close on the chocolate band, the name set wide. */
+  .close { background: var(--band); color: var(--on-band); padding: clamp(80px, 12vh, 128px) 0 0; overflow: hidden; }
+  .close__row { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px 48px; flex-wrap: wrap; }
+  .close__row > div { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; max-width: 40ch; color: var(--on-band-2); }
+  .close__name { font: 400 clamp(56px, 16vw, 232px)/1.1 var(--f-script); color: var(--peach); white-space: nowrap; margin-top: 40px; padding-bottom: 0.08em; }
+
+  @media (max-width: 1023px) {
+    .hero__text { grid-column: span 7; }
+    .hero__ph { grid-column: 8 / span 5; }
+    .visit { grid-column: 1 / -1; }
+    .visit__ph { grid-column: 1 / -1; }
+    .visit__ph .ph { min-height: 0; aspect-ratio: 16 / 9; }
+    .group { grid-column: span 4; }
+    .vitrine__ph { display: none; }
+    .order { grid-column: span 4; }
+    .order h3 { font-size: 26px; }
+  }
+  @media (max-width: 767px) {
+    .hero { min-height: 0; }
+    .hero__text, .hero__ph { grid-column: 1 / -1; }
+    .hero__ph { aspect-ratio: 4 / 3; max-height: none; }
+    .group, .order { grid-column: 1 / -1; }
+    .orders { row-gap: 48px; }
+  }
+  @media (max-width: 639px) {
+    .hero { padding-top: calc(var(--nav) + 24px); }
+    .hero__cta { width: 100%; }
+    .hero__cta .btn { width: 100%; }
+    .visit { padding: 28px 24px; }
+    .visit__cols { grid-template-columns: 1fr; }
+    .close__row .btn { width: 100%; }
+    .close__row > div { width: 100%; }
+  }
+</style>
+
+<script>
+  // "Open now" line, in Dakar time (UTC+0, no daylight saving).
+  const el = document.querySelector<HTMLElement>('[data-open-now]');
+  if (el) {
+    const now = new Date();
+    const day = now.getUTCDay();
+    const m = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const [o, c] = day === 0 ? [420, 1200] : [390, 1230];
+    const fmt = (x: number) => `${Math.floor(x / 60)} h${x % 60 ? ' ' + String(x % 60).padStart(2, '0') : ''}`;
+    if (m >= o && m < c) { el.textContent = `Ouvert, jusqu’à ${fmt(c)}`; el.classList.add('is-open'); }
+    else el.textContent = m < o ? `Fermé, ouvre à ${fmt(o)}` : `Fermé, ouvre demain à ${fmt(day === 6 ? 420 : 390)}`;
+  }
+</script>
